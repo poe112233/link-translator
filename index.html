@@ -37,7 +37,15 @@
   .result-item .link {
     font-size: 13px; color: #1677ff; word-break: break-all; line-height: 1.6;
     background: #f6f8fc; padding: 8px 10px; border-radius: 4px; font-family: monospace;
+    display: flex; align-items: flex-start; gap: 8px;
   }
+  .result-item .link .link-url { flex: 1; min-width: 0; }
+  .result-item .link .open-icon {
+    flex: none; display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 4px; color: #1677ff;
+    text-decoration: none; transition: all .15s;
+  }
+  .result-item .link .open-icon:hover { background: #e6f0ff; color: #0958d9; }
   .result-item .formula {
     font-size: 12px; color: #555; word-break: break-all; line-height: 1.6;
     background: #f2fbf3; border: 1px solid #e0f0e2; padding: 8px 10px; border-radius: 4px; font-family: monospace;
@@ -85,13 +93,19 @@ function extractItemID(url) {
 
 function buildLinks(cleanUrl) {
   const itemID = extractItemID(cleanUrl);
+  const canonicalUrl = 'https://weidian.com/item.html?itemID=' + itemID;
   return {
-    oopbuy: 'https://oopbuy.com/product/weidian/' + itemID + '?originKeywordUrl=' + encodeURIComponent(encodeURIComponent(cleanUrl)),
-    kakaobuy: 'https://item.kakobuy.com/item/details?url=' + encodeURIComponent(cleanUrl),
+    oopbuy: 'https://oopbuy.com/product/weidian/' + itemID + '?inviteCode=G6N5UV92Q',
+    kakaobuy: 'https://item.kakobuy.com/item/details?url=' + encodeURIComponent(canonicalUrl),
     uidbuy: 'https://www.uidbuy.com/product/3/' + itemID,
     hipobuy: 'https://hipobuy.com/product/weidian/' + itemID,
     litbuy: 'https://litbuy.com/product/weidian/' + itemID + '?linkSearch=true'
   };
+}
+
+/* ---- 合并排版输出 ---- */
+function buildMergedText(links) {
+  return CHANNELS.map(ch => ch.name.toLowerCase() + ' link：' + links[ch.key]).join('\n');
 }
 
 /* ---- Google 表格公式 ---- */
@@ -171,6 +185,15 @@ function generate() {
   const results = document.getElementById('results');
   results.innerHTML = '';
 
+  // 合并排版文本
+  const mergedBlocks = lines.map((url) => buildMergedText(buildLinks(url)));
+  results.appendChild(makeBatchBox(
+    '合并排版 · 每行一个渠道（可直接粘贴）',
+    mergedBlocks.join('\n\n'),
+    '复制合并排版',
+    '已复制排版'
+  ));
+
   // 批量：纯链接 TSV
   const linkRows = lines.map((url) => {
     const links = buildLinks(url);
@@ -217,7 +240,21 @@ function generate() {
 
       const linkDiv = document.createElement('div');
       linkDiv.className = 'link';
-      linkDiv.textContent = link;
+
+      const linkUrl = document.createElement('span');
+      linkUrl.className = 'link-url';
+      linkUrl.textContent = link;
+      linkDiv.appendChild(linkUrl);
+
+      const openIcon = document.createElement('a');
+      openIcon.className = 'open-icon';
+      openIcon.href = link;
+      openIcon.target = '_blank';
+      openIcon.rel = 'noopener noreferrer';
+      openIcon.title = '在新标签打开';
+      openIcon.innerHTML = '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5H4.2a1.2 1.2 0 0 0-1.2 1.2v7.1a1.2 1.2 0 0 0 1.2 1.2h7.1a1.2 1.2 0 0 0 1.2-1.2V9.5"/><path d="M9.8 3.5h2.7v2.7"/><path d="M12.3 3.7L7.4 8.6"/></svg>';
+      linkDiv.appendChild(openIcon);
+
       card.appendChild(linkDiv);
 
       const linkBtnLine = document.createElement('div');
